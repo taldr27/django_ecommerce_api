@@ -8,6 +8,8 @@ from pprint import pprint
 from django.db import transaction
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 class RegisterView(generics.CreateAPIView):
     queryset = MyUser.objects.all()
@@ -36,6 +38,23 @@ class LoginView(TokenObtainPairView):
 class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()
     serializer_class = ProductSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['price', 'created_at']
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        if not queryset:
+            return Response({'message': 'No products found!'}, status=status.HTTP_404_NOT_FOUND)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 class ProductCreateView(generics.CreateAPIView):
     queryset = ProductModel.objects.all()
