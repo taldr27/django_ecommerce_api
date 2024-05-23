@@ -1,9 +1,11 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleModel, SaleSerializer, SaleDetailSerializer, SaleDetailModel
 from cloudinary.uploader import upload
 from django.http import Http404
 from pprint import pprint
+from django.db import transaction
+from django.contrib.auth.models import User
 
 class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()
@@ -62,3 +64,86 @@ class ProductUploadImageView(generics.GenericAPIView):
         
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class SaleView(generics.ListAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+
+class SaleCreateView(generics.CreateAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            serializer = self.serializer_class(data=data)
+            serializer.is_valid(raise_exception=True)
+            
+            user = User.objects.get(id=data['user_id'])
+            
+            sale = SaleModel.objects.create(
+                total_price=data['total_price'],
+                user_id=user,
+            )
+            sale.save()
+            
+            for item in data['sale_details']:
+                product_id = item['product_id']
+                quantity = item['quantity']
+                
+                product = ProductModel.objects.get(id=product_id)
+                if product.stock < quantity:
+                    raise Exception(f'Product {product.name} has insufficient stock in the store!')
+                
+                product.stock -= quantity
+                product.save()
+                
+                sale_detail = SaleDetailModel.objects.create(
+                    quantity=quantity,
+                    price=item['price'],
+                    subtotal=item['subtotal'],
+                    product_id=product,
+                    sale_id=sale
+                )
+                
+                sale_detail.save()
+                
+            return Response({'message': 'Sale created!'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class SaleUpdateView(generics.UpdateAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+    
+class SaleDeleteView(generics.DestroyAPIView):
+    queryset = SaleModel.objects.all()
+    serializer_class = SaleSerializer
+
+# class SaleCreateView(generics.CreateAPIView):
+#     queryset = SaleModel.objects.all()
+#     serializer_class = SaleSerializer
+
+#     @transaction.atomic
+#     def create(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         product_id = serializer.validated_data['product_id'].id
+#         quantity = serializer.validated_data['quantity']
+
+#         try:
+#             product = ProductModel.objects.select_for_update().get(id=product_id)
+#             if product.stock < quantity:
+#                 return Response({"error": "Not enough stok"}, status=status.HTTP_400_BAD_REQUEST)
+
+#             product.stock -= quantity
+#             product.save()
+
+#             self.perform_create(serializer)
+
+#             headers = self.get_success_headers(serializer.data)
+#             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+#         except ProductModel.DoesNotExist:
+#             return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
