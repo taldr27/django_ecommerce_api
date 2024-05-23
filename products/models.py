@@ -27,9 +27,9 @@ class ProductModel(models.Model):
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = CloudinaryField('image')
-    color = ArrayField(models.CharField(max_length=10, null=True), default=list, blank=True)
+    color = ArrayField(models.CharField(max_length=10, null=True), default=list, blank=True) # ['red', 'blue', 'green'] array de colores
     stock = models.IntegerField()
-    review = ArrayField(models.CharField(max_length=200, null=True), default=list, blank=True)
+    review = ArrayField(models.CharField(max_length=200, null=True), default=list, blank=True) # ['good', 'bad', 'excellent'] array de reviews, al hacer post se puede mandar vacio []
     category = ArrayField(models.CharField(max_length=20, null=True), default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

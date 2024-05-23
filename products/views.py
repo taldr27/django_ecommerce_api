@@ -60,7 +60,7 @@ class ProductCreateView(generics.CreateAPIView):
     queryset = ProductModel.objects.all()
     serializer_class = ProductSerializer
     
-class ProductBigCreateView(generics.ListCreateAPIView):
+class ProductBigCreateView(generics.CreateAPIView):
     queryset = ProductModel.objects.all()
     serializer_class = ProductSerializer
 
@@ -102,10 +102,8 @@ class ProductUploadImageView(generics.GenericAPIView):
                 return Response({'error': 'No image uploaded!'}, status=status.HTTP_400_BAD_REQUEST)
             
             uploaded_image = upload(image_file)
-            file_url_name = uploaded_image['secure_url'].split('/')[-1]
-            image_path = f'{uploaded_image["resource_type"]}/{uploaded_image["type"]}/v{uploaded_image["version"]}/{file_url_name}'
             
-            return Response({'message': 'Image uploaded!', 'image_url': uploaded_image['url'], 'short_url': image_path}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'Image uploaded!', 'image_url': uploaded_image['url']}, status=status.HTTP_201_CREATED)
         
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -125,7 +123,7 @@ class SaleCreateView(generics.CreateAPIView):
             serializer = self.serializer_class(data=data)
             serializer.is_valid(raise_exception=True)
             
-            user = User.objects.get(id=data['user_id'])
+            user = MyUser.objects.get(id=data['user_id'])
             
             sale = SaleModel.objects.create(
                 total_price=data['total_price'],
