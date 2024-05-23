@@ -1,5 +1,30 @@
 from rest_framework import serializers
-from .models import ProductModel, SaleModel, SaleDetailModel
+from .models import ProductModel, SaleModel, SaleDetailModel, MyUser
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    
+    class Meta:
+        model = MyUser
+        exclude = ['last_login']
+        
+    def save(self):
+        email=self.validated_data['email']
+        password=self.validated_data['password']
+        name=self.validated_data['name']
+        document_type=self.validated_data['document_type']
+        document_number=self.validated_data['document_number']
+
+        user = MyUser(
+            name=name,
+            email=email,
+            document_type=document_type,
+            document_number=document_number
+        )
+        
+        user.set_password(password)
+        user.save()
+        return user
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:

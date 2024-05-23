@@ -1,11 +1,32 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleModel, SaleSerializer, SaleDetailSerializer, SaleDetailModel
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleModel, SaleSerializer, SaleDetailSerializer, SaleDetailModel, UserCreateSerializer
+from .models import MyUser
 from cloudinary.uploader import upload
 from django.http import Http404
 from pprint import pprint
 from django.db import transaction
 from django.contrib.auth.models import User
+
+class RegisterView(generics.CreateAPIView):
+    queryset = MyUser.objects.all()
+    serializer_class = UserCreateSerializer
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            email = request.data.get('email')
+            user = MyUser.objects.filter(email=email).first()
+            
+            if user:
+                return Response({'error': 'User already exists!'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            
+            return Response({'message': 'User created!'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()

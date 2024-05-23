@@ -9,7 +9,8 @@ from .views import (
     SaleView,
     SaleCreateView,
     SaleUpdateView,
-    SaleDeleteView
+    SaleDeleteView,
+    RegisterView
 )
 
 urlpatterns = [
@@ -22,5 +23,6 @@ urlpatterns = [
     path('sales/all', SaleView.as_view(), name='sales'),
     path('sales/create', SaleCreateView.as_view(), name='sale-create'),
     path('sales/update/<int:pk>', SaleUpdateView.as_view(), name='sale-update'),
-    path('sales/delete/<int:pk>', SaleDeleteView.as_view(), name='sale-delete')
+    path('sales/delete/<int:pk>', SaleDeleteView.as_view(), name='sale-delete'),
+    path('user/register', RegisterView.as_view(), name='user-register'),
 ]
