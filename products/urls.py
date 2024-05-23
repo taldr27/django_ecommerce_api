@@ -10,7 +10,8 @@ from .views import (
     SaleCreateView,
     SaleUpdateView,
     SaleDeleteView,
-    RegisterView
+    RegisterView,
+    LoginView
 )
 
 urlpatterns = [
@@ -25,4 +26,5 @@ urlpatterns = [
     path('sales/update/<int:pk>', SaleUpdateView.as_view(), name='sale-update'),
     path('sales/delete/<int:pk>', SaleDeleteView.as_view(), name='sale-delete'),
     path('user/register', RegisterView.as_view(), name='user-register'),
+    path('user/login', LoginView.as_view(), name='user-login')
 ]

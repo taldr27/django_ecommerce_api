@@ -1,12 +1,13 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleModel, SaleSerializer, SaleDetailSerializer, SaleDetailModel, UserCreateSerializer
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleModel, SaleSerializer, SaleDetailSerializer, SaleDetailModel, UserCreateSerializer, MyTokenObtainPairSerializer
 from .models import MyUser
 from cloudinary.uploader import upload
 from django.http import Http404
 from pprint import pprint
 from django.db import transaction
 from django.contrib.auth.models import User
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 class RegisterView(generics.CreateAPIView):
     queryset = MyUser.objects.all()
@@ -27,6 +28,9 @@ class RegisterView(generics.CreateAPIView):
             return Response({'message': 'User created!'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class LoginView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import ProductModel, SaleModel, SaleDetailModel, MyUser
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -25,6 +26,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+    
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['email'] = user.email
+        return token
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
