@@ -1,7 +1,25 @@
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from cloudinary.models import CloudinaryField
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractBaseUser
+from .manager import UserManager
+
+class MyUser(AbstractBaseUser):
+    name = models.CharField(max_length=255)
+    email = models.EmailField(max_length=255, unique=True)
+    document_type = models.CharField(max_length=100, blank=True, null=True)
+    document_number = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    status = models.BooleanField(default=True)
+    is_admin = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    
+    objects = UserManager()
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name', 'document_type', 'document_number']
+    
+    def __str__(self):
+        return self.email
 
 class ProductModel(models.Model):
     id = models.AutoField(primary_key=True)
@@ -25,7 +43,7 @@ class ProductModel(models.Model):
 class SaleModel(models.Model):
     id = models.AutoField(primary_key=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    user_id = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

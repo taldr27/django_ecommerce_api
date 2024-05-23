@@ -140,6 +140,8 @@ config(
     api_secret= environ.get('CLOUDINARY_API_SECRET')
 )
 
+AUTH_USER_MODEL = 'products.MyUser'
+
 CORS_ORIGIN_ALLOW_ALL = True
 
 # CORS_ALLOWED_ORIGINS = [

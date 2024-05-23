@@ -120,30 +120,3 @@ class SaleUpdateView(generics.UpdateAPIView):
 class SaleDeleteView(generics.DestroyAPIView):
     queryset = SaleModel.objects.all()
     serializer_class = SaleSerializer
-
-# class SaleCreateView(generics.CreateAPIView):
-#     queryset = SaleModel.objects.all()
-#     serializer_class = SaleSerializer
-
-#     @transaction.atomic
-#     def create(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-
-#         product_id = serializer.validated_data['product_id'].id
-#         quantity = serializer.validated_data['quantity']
-
-#         try:
-#             product = ProductModel.objects.select_for_update().get(id=product_id)
-#             if product.stock < quantity:
-#                 return Response({"error": "Not enough stok"}, status=status.HTTP_400_BAD_REQUEST)
-
-#             product.stock -= quantity
-#             product.save()
-
-#             self.perform_create(serializer)
-
-#             headers = self.get_success_headers(serializer.data)
-#             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-#         except ProductModel.DoesNotExist:
-#             return Response({"error": "Product does not exist"}, status=status.HTTP_404_NOT_FOUND)
