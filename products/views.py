@@ -23,9 +23,10 @@ class RegisterView(generics.CreateAPIView):
             
             serializer = self.serializer_class(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            new_user = serializer.save()
+            response = self.serializer_class(new_user).data
             
-            return Response({'message': 'User created!'}, status=status.HTTP_201_CREATED)
+            return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
