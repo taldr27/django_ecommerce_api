@@ -41,6 +41,33 @@ class RegisterView(generics.CreateAPIView):
         
 class LoginView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if 'access' in response.data and 'refresh' in response.data:
+            user = self.get_user(request.data.get('email'))
+            if user:
+                user_data = {
+                    'id': user.id,
+                    'name': user.name,
+                    'email': user.email,
+                    'document_type': user.document_type,
+                    'document_number': user.document_number,
+                    'status': user.status,
+                    'is_admin': user.is_admin,
+                    'is_active': user.is_active,
+                }
+                response.data['user'] = user_data
+            else:
+                response.data['error'] = 'User not found'
+                response.status_code = status.HTTP_404_NOT_FOUND
+        return response
+
+    def get_user(self, email):
+        try:
+            return MyUser.objects.get(email=email)
+        except MyUser.DoesNotExist:
+            return None
     
 class CheckAuthView(APIView):
     permission_classes = [IsAuthenticated]
@@ -48,7 +75,7 @@ class CheckAuthView(APIView):
     def get(self, request):
         user = request.user
         is_admin = user.is_admin
-        return Response({'user': user.email, 'is_admin': is_admin}, status=status.HTTP_200_OK)
+        return Response({'user_id': user.id, 'user': user.email, 'is_admin': is_admin}, status=status.HTTP_200_OK)
 
 class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()
@@ -187,3 +214,10 @@ class SaleUpdateView(generics.UpdateAPIView):
 class SaleDeleteView(generics.DestroyAPIView):
     queryset = SaleModel.objects.all()
     serializer_class = SaleSerializer
+
+class UserSalesView(generics.ListAPIView):
+    serializer_class = SaleSerializer
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+        return SaleModel.objects.filter(user_id=user_id)

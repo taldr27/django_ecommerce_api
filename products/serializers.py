@@ -51,9 +51,11 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class SaleDetailSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True, source='product_id')
+
     class Meta:
         model = SaleDetailModel
-        exclude = ['sale_id']
+        fields = ['id', 'quantity', 'price', 'subtotal', 'product']
 
 class SaleSerializer(serializers.ModelSerializer):
     sale_details = SaleDetailSerializer(many=True)

@@ -13,7 +13,8 @@ from .views import (
     RegisterView,
     LoginView,
     CheckAuthView,
-    ProductDetailView
+    ProductDetailView,
+    UserSalesView
 )
 
 urlpatterns = [
@@ -28,6 +29,7 @@ urlpatterns = [
     path('sales/create', SaleCreateView.as_view(), name='sale-create'),
     path('sales/update/<int:pk>', SaleUpdateView.as_view(), name='sale-update'),
     path('sales/delete/<int:pk>', SaleDeleteView.as_view(), name='sale-delete'),
+    path('sales/user/<int:user_id>/', UserSalesView.as_view(), name='user-sales'),
     path('user/register', RegisterView.as_view(), name='user-register'),
     path('user/login', LoginView.as_view(), name='user-login'),
     path('user/check-auth/', CheckAuthView.as_view(), name='check-auth'),
