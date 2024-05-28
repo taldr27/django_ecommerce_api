@@ -18,8 +18,7 @@ SECRET_KEY = 'django-insecure-_=+s^0(qpvruuexg+&&!bq7s1ltp-xc-lk@^+@3n*mqouo5kkz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['django-ecommerce-rdvw.onrender.com', '127.0.0.1']
 
 # Application definition
 
@@ -32,6 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'drf_yasg',
     'rest_framework',
+    'corsheaders',
     'rest_framework_simplejwt',
     'django_filters',
     'products',
@@ -56,6 +56,7 @@ SIMPLE_JWT = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -150,5 +151,10 @@ AUTH_USER_MODEL = 'products.MyUser'
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-# CORS_ALLOWED_ORIGINS = [
-# ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173"
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173"
+]

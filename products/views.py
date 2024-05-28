@@ -10,6 +10,9 @@ from django.contrib.auth.models import User
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class RegisterView(generics.CreateAPIView):
     queryset = MyUser.objects.all()
@@ -26,14 +29,25 @@ class RegisterView(generics.CreateAPIView):
             serializer = self.serializer_class(data=request.data)
             serializer.is_valid(raise_exception=True)
             new_user = serializer.save()
-            response = self.serializer_class(new_user).data
-            
+            refresh = RefreshToken.for_user(new_user)
+            response = {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': serializer.data
+            }
             return Response(response, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class LoginView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+    
+class CheckAuthView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({'user': user.email}, status=status.HTTP_200_OK)
 
 class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()

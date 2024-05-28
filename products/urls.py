@@ -11,7 +11,8 @@ from .views import (
     SaleUpdateView,
     SaleDeleteView,
     RegisterView,
-    LoginView
+    LoginView,
+    CheckAuthView
 )
 
 urlpatterns = [
@@ -26,5 +27,6 @@ urlpatterns = [
     path('sales/update/<int:pk>', SaleUpdateView.as_view(), name='sale-update'),
     path('sales/delete/<int:pk>', SaleDeleteView.as_view(), name='sale-delete'),
     path('user/register', RegisterView.as_view(), name='user-register'),
-    path('user/login', LoginView.as_view(), name='user-login')
+    path('user/login', LoginView.as_view(), name='user-login'),
+    path('user/check-auth/', CheckAuthView.as_view(), name='check-auth'),
 ]
