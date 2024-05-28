@@ -3,26 +3,17 @@ from .models import ProductModel, SaleModel, SaleDetailModel, MyUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class UserCreateSerializer(serializers.ModelSerializer):
+    is_admin = serializers.BooleanField(default=False)
     password = serializers.CharField(write_only=True)
     
     class Meta:
         model = MyUser
         exclude = ['last_login']
         
-    def save(self):
-        email=self.validated_data['email']
-        password=self.validated_data['password']
-        name=self.validated_data['name']
-        document_type=self.validated_data['document_type']
-        document_number=self.validated_data['document_number']
-
-        user = MyUser(
-            name=name,
-            email=email,
-            document_type=document_type,
-            document_number=document_number
-        )
-        
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        is_admin = validated_data.pop('is_admin', False)
+        user = MyUser.objects.create(**validated_data, is_admin=is_admin)
         user.set_password(password)
         user.save()
         return user
