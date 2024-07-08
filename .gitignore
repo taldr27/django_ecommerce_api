@@ -133,6 +133,7 @@ celerybeat.pid
 .env
 .venv/
 .myenv/
+myenv/
 .venv
 env/
 django_env/

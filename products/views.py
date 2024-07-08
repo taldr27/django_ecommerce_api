@@ -13,6 +13,10 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from os import environ
+import requests
+from pprint import pprint
+from datetime import datetime
 
 class RegisterView(generics.CreateAPIView):
     queryset = MyUser.objects.all()
@@ -221,3 +225,62 @@ class UserSalesView(generics.ListAPIView):
     def get_queryset(self):
         user_id = self.kwargs['user_id']
         return SaleModel.objects.filter(user_id=user_id)
+
+class InvoiceCreateView(generics.GenericAPIView):
+    serializer_class = SaleSerializer
+    
+    def post(self, request):
+        try:
+            url = environ.get('NUBEFACT_URL')
+            token = environ.get('NUBEFACT_TOKEN')
+            
+            invoice_data = {
+                'operacion': 'generar_comprobante',
+                'tipo_de_comprobante': 2,
+                'serie': 'BBB1',
+                'numero': 1,
+                'sunat_transaction': 1,
+                'cliente_tipo_de_documento': 1,
+                'cliente_numero_de_documento': '12345678',
+                'cliente_denominacion': 'TEST',
+                'cliente_direccion': 'AV. TEST 123',
+                'cliente_email': 'test@mail.com',
+                'fecha_de_emision': datetime.now().strftime('%d-%m-%Y'),
+                'moneda': 1,
+                'porcentaje_de_igv': 18.0,
+                'total_gravada': 100,
+                'total_igv': 18,
+                'total': 118,
+                'detraccion': False,
+                'enviar_automaticamente_a_la_sunat': True,
+                'enviar_automaticamente_al_cliente': True,
+                'items': [
+                    {
+                        'unidad_de_medida': 'NIU',
+                        'codigo': 'P001',
+                        'descripcion': 'SNEAKERS',
+                        'cantidad': 1,
+                        'valor_unitario': 100,
+                        'precio_unitario': 118,
+                        'subtotal': 100,
+                        'tipo_de_igv': 1,
+                        'igv': 18,
+                        'total': 118,
+                        
+                    }
+                ]
+            }
+            
+            nubefact_response = requests.post(url, headers={'Authorization': f'Bearer {token}'}, json=invoice_data)
+
+            pprint(nubefact_response.json())
+            pprint(nubefact_response.status_code)
+
+            return Response({
+                'message': 'Invoice created!'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
