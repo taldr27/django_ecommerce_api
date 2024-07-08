@@ -18,6 +18,8 @@ from os import environ
 import requests
 from pprint import pprint
 from datetime import datetime
+import mercadopago
+from rest_framework.request import Request
 
 class RegisterView(generics.CreateAPIView):
     queryset = MyUser.objects.all()
@@ -373,3 +375,46 @@ class InvoiceGetView(APIView):
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+class PaymentCreateView(APIView):
+    def post(self, request):
+        try:
+            mp = mercadopago.SDK(environ.get('MP_ACCESS_TOKEN'))
+
+            preference = {
+                'items': [
+                    {
+                        "id": "1",
+                        "title": "Sneakers",
+                        "description": "Sneakers description",
+                        "quantity": 1,
+                        "unit_price": 200
+                    }
+                ],
+                'notification_url': 'http://localhost:8000/api/payment/notification',
+            }
+
+            mp_response = mp.preference().create(preference)
+            pprint(mp_response)
+
+            if mp_response['status'] != 201:
+                return Response({
+                    'errors': mp_response['response']['message']
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response(mp_response['response'], status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class NotificationPaymentView(APIView):
+    def post(self, request: Request):
+        try:
+            data = request.data
+            pprint(data)
+            print(request.query_params)
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
