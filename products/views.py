@@ -390,11 +390,10 @@ class PaymentCreateView(APIView):
                         "unit_price": 200
                     }
                 ],
-                'notification_url': 'http://localhost:8000/api/payment/notification',
+                'notification_url': 'https://eeeb-181-67-60-26.ngrok-free.app/api/payment/notification',
             }
 
             mp_response = mp.preference().create(preference)
-            pprint(mp_response)
 
             if mp_response['status'] != 201:
                 return Response({
@@ -411,10 +410,12 @@ class NotificationPaymentView(APIView):
     def post(self, request: Request):
         try:
             data = request.data
-            pprint(data)
+            print(data)
             print(request.query_params)
-            return Response(data, status=status.HTTP_200_OK)
+
+            return Response({'ok': True}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        

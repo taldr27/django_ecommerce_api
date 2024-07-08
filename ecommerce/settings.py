@@ -19,7 +19,8 @@ SECRET_KEY = 'django-insecure-_=+s^0(qpvruuexg+&&!bq7s1ltp-xc-lk@^+@3n*mqouo5kkz
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['django-ecommerce-rdvw.onrender.com', 'localhost', '127.0.0.1']
+# ALLOWED_HOSTS = ['django-ecommerce-rdvw.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -161,6 +162,10 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173"
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173"
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173"
+# ]
+
+CORS_ALLOWED_ORIGINS = ["https://eeeb-181-67-60-26.ngrok-free.app"]
+
+CORS_ALLOW_ALL_ORIGINS = True
