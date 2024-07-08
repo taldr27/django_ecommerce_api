@@ -63,3 +63,15 @@ class SaleSerializer(serializers.ModelSerializer):
     class Meta:
         model = SaleModel
         fields = '__all__'
+
+class SaleDetailCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SaleDetailModel
+        exclude = ['sale_id']
+
+class SaleCreateSerializer(serializers.ModelSerializer):
+    sale_details = SaleDetailCreateSerializer(source='saleDetails', many=True)
+
+    class Meta:
+        model = SaleModel
+        fields = '__all__'

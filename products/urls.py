@@ -15,7 +15,8 @@ from .views import (
     CheckAuthView,
     ProductDetailView,
     UserSalesView,
-    InvoiceCreateView
+    InvoiceCreateView,
+    InvoiceGetView
 )
 
 urlpatterns = [
@@ -34,5 +35,6 @@ urlpatterns = [
     path('user/register', RegisterView.as_view(), name='user-register'),
     path('user/login', LoginView.as_view(), name='user-login'),
     path('user/check-auth/', CheckAuthView.as_view(), name='check-auth'),
-    path('invoices/create', InvoiceCreateView.as_view(), name='invoice-create')
+    path('invoices/create', InvoiceCreateView.as_view(), name='invoice-create'),
+    path('invoices/get/<int:tipo_de_comprobante>/<str:serie>/<int:numero>', InvoiceGetView.as_view(), name='invoice-get')
 ]

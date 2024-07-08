@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleModel, SaleSerializer, SaleDetailSerializer, SaleDetailModel, UserCreateSerializer, MyTokenObtainPairSerializer
+from rest_framework.views import APIView
+from .serializers import ProductSerializer, ProductModel, ProductUpdateSerializer, SaleModel, SaleSerializer, SaleDetailSerializer, SaleCreateSerializer, SaleDetailModel, UserCreateSerializer, MyTokenObtainPairSerializer
 from .models import MyUser
 from cloudinary.uploader import upload
 from django.http import Http404
@@ -169,7 +170,7 @@ class SaleView(generics.ListAPIView):
 
 class SaleCreateView(generics.CreateAPIView):
     queryset = SaleModel.objects.all()
-    serializer_class = SaleSerializer
+    serializer_class = SaleCreateSerializer
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -185,6 +186,8 @@ class SaleCreateView(generics.CreateAPIView):
                 user_id=user,
             )
             sale.save()
+
+            items = []
             
             for item in data['sale_details']:
                 product_id = item['product_id']
@@ -206,9 +209,64 @@ class SaleCreateView(generics.CreateAPIView):
                 )
                 
                 sale_detail.save()
+
+                igv = item['price'] * 0.18
+                valor_unitario = item['price']
+                precio_unitario = item['price'] + igv
+                subtotal = item['subtotal']
+
+                items.append({
+                    'unidad_de_medida': 'NIU',
+                    'codigo': 'P001',
+                    'codigo_producto_sunat': '10000000',
+                    'descripcion': product.name,
+                    'cantidad': quantity,
+                    'valor_unitario': valor_unitario,
+                    'precio_unitario': precio_unitario,
+                    'subtotal': subtotal,
+                    'tipo_de_igv': 1,
+                    'igv': igv,
+                    'total': (item['price'] + igv) * quantity,
+                    'anticipo_regularizacion': False
+                })
+                
+            body = {
+                'operacion': 'generar_comprobante',
+                'tipo_de_comprobante': 2,
+                'serie': 'BBB1',
+                'numero': 1,
+                'sunat_transaction': 1,
+                'cliente_tipo_de_documento': 1,
+                'cliente_numero_de_documento': '12345678',
+                'cliente_denominacion': 'TEST',
+                'cliente_direccion': 'AV. TEST 123',
+                'cliente_email': 'test@mail.com',
+                'fecha_de_emision': datetime.now().strftime('%d-%m-%Y'),
+                'moneda': 1,
+                'porcentaje_de_igv': 18.0,
+                'total_gravada': 100,
+                'total_igv': 18,
+                'total': 118,
+                'detraccion': False,
+                'enviar_automaticamente_a_la_sunat': True,
+                'enviar_automaticamente_al_cliente': True,
+                'items': items
+            }
+
+            nubefact_response = requests.post(
+                url = environ.get('NUBEFACT_URL'),
+                headers={'Authorization': f'Bearer {environ.get("NUBEFACT_TOKEN")}'},
+                json=body
+            )
+
+            json = nubefact_response.json()
+
+            if nubefact_response.status_code != 200:
+                raise Exception(json['errors'])
                 
             return Response({'message': 'Sale created!'}, status=status.HTTP_201_CREATED)
         except Exception as e:
+            transaction.set_rollback(True)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class SaleUpdateView(generics.UpdateAPIView):
@@ -258,6 +316,7 @@ class InvoiceCreateView(generics.GenericAPIView):
                     {
                         'unidad_de_medida': 'NIU',
                         'codigo': 'P001',
+                        'codigo_producto_sunat': '1234567890',
                         'descripcion': 'SNEAKERS',
                         'cantidad': 1,
                         'valor_unitario': 100,
@@ -266,19 +325,49 @@ class InvoiceCreateView(generics.GenericAPIView):
                         'tipo_de_igv': 1,
                         'igv': 18,
                         'total': 118,
-                        
+                        'anticipo_regularizacion': False
                     }
                 ]
             }
             
-            nubefact_response = requests.post(url, headers={'Authorization': f'Bearer {token}'}, json=invoice_data)
+            nubefact_response = requests.post(url, headers={
+                'Authorization': f'Bearer {token}'
+            }, json=invoice_data)
 
-            pprint(nubefact_response.json())
-            pprint(nubefact_response.status_code)
+            json = nubefact_response.json()
 
+            if nubefact_response.status_code != 200:
+                raise Exception(json['errors'])
+
+            return Response(json, status=status.HTTP_201_CREATED)
+        except Exception as e:
             return Response({
-                'message': 'Invoice created!'
-            }, status=status.HTTP_201_CREATED)
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class InvoiceGetView(APIView):
+    def get(self, request, tipo_de_comprobante, serie, numero):
+        try:
+            body = {
+                    'operacion': 'consultar_comprobante',
+                    'tipo_de_comprobante': tipo_de_comprobante,
+                    'serie': serie,
+                    'numero': numero
+            }
+
+            nubefact_response = requests.post(
+                url = environ.get('NUBEFACT_URL'),
+                headers={'Authorization': f'Bearer {environ.get("NUBEFACT_TOKEN")}'},
+                json=body
+            )
+
+            response = nubefact_response.json()
+
+            if (nubefact_response.status_code != 200):
+                raise Exception(response['errors'])
+
+            return Response(response, status=status.HTTP_200_OK)
+
         except Exception as e:
             return Response({
                 'error': str(e)
