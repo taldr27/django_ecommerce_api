@@ -95,7 +95,7 @@ class ProductView(generics.ListAPIView):
         queryset = self.filter_queryset(self.get_queryset())
 
         if not queryset.exists():
-            return Response({'message': 'No products found!'}, status=status.HTTP_404_NOT_FOUND)
+            return Response([], status=status.HTTP_200_OK)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
