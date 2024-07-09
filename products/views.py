@@ -88,13 +88,13 @@ class ProductView(generics.ListAPIView):
     queryset = ProductModel.objects.all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['name', 'description']
+    search_fields = ['category']
     ordering_fields = ['price', 'created_at']
     
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
-        if not queryset:
+        if not queryset.exists():
             return Response({'message': 'No products found!'}, status=status.HTTP_404_NOT_FOUND)
 
         page = self.paginate_queryset(queryset)
@@ -390,7 +390,6 @@ class PaymentCreateView(APIView):
                         "unit_price": 200
                     }
                 ],
-                'notification_url': 'https://eeeb-181-67-60-26.ngrok-free.app/api/payment/notification',
             }
 
             mp_response = mp.preference().create(preference)
