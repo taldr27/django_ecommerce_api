@@ -12,3 +12,4 @@ MP_ACCESS_TOKEN=""
 
 python -m venv myenv
 pip install -r requirements. txt
+python manage.py migrate
