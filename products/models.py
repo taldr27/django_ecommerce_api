@@ -26,6 +26,7 @@ class ProductModel(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     price = models.FloatField()
+    is_active = models.BooleanField(default=True)
     image = CloudinaryField('image')
     color = ArrayField(models.CharField(max_length=10, null=True), default=list, blank=True) # ['red', 'blue', 'green'] array de colores
     stock = models.IntegerField()
@@ -43,6 +44,8 @@ class ProductModel(models.Model):
 class SaleModel(models.Model):
     id = models.AutoField(primary_key=True)
     total_price = models.FloatField()
+    total_gravada = models.FloatField(default=0.0)
+    total_igv = models.FloatField(default=0.0)
     user_id = models.ForeignKey(MyUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

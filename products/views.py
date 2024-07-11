@@ -56,6 +56,7 @@ class LoginView(TokenObtainPairView):
             if user:
                 user_data = {
                     'id': user.id,
+                    'user_id': user.id,
                     'name': user.name,
                     'email': user.email,
                     'document_type': user.document_type,
@@ -82,10 +83,10 @@ class CheckAuthView(APIView):
     def get(self, request):
         user = request.user
         is_admin = user.is_admin
-        return Response({'user_id': user.id, 'user': user.email, 'is_admin': is_admin}, status=status.HTTP_200_OK)
+        return Response({'user_id': user.id, 'id': user.id, 'user': user.email, 'is_admin': is_admin}, status=status.HTTP_200_OK)
 
 class ProductView(generics.ListAPIView):
-    queryset = ProductModel.objects.all()
+    queryset = ProductModel.objects.filter(is_active=True)
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ['category']
@@ -138,15 +139,18 @@ class ProductDeleteView(generics.DestroyAPIView):
     serializer_class = ProductSerializer
 
     def destroy(self, request, *args, **kwargs):
-        try:
-            instance = self.get_object()
-            instance.stock -= 1
-            instance.save()
-            return Response({'message': 'Product deleted!'}, status=status.HTTP_200_OK)
-        except Http404:
-            return Response({'error': 'Product not found!'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            try:
+                instance = self.get_object()
+                
+                instance.is_active = False
+                instance.stock = 0
+                instance.save()
+
+                return Response({'message': 'Product deleted!'}, status=status.HTTP_200_OK)
+            except Http404:
+                return Response({'error': 'Product not found!'}, status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ProductUploadImageView(generics.GenericAPIView):
     queryset = ProductModel.objects.all()
@@ -190,6 +194,8 @@ class SaleCreateView(generics.CreateAPIView):
             sale.save()
 
             items = []
+            total_igv = 0
+            total_gravada = 0
             
             for item in data['sale_details']:
                 product_id = item['product_id']
@@ -202,20 +208,19 @@ class SaleCreateView(generics.CreateAPIView):
                 product.stock -= quantity
                 product.save()
                 
-                sale_detail = SaleDetailModel.objects.create(
+                igv = round(item['price'] * 0.18, 2)
+                subtotal = round(item['price'] * quantity, 2)
+                
+                total_gravada += round(item['price'] * quantity, 2)
+                total_igv += round(igv * quantity, 2)
+
+                SaleDetailModel.objects.create(
                     quantity=quantity,
                     price=item['price'],
-                    subtotal=item['subtotal'],
+                    subtotal=subtotal,
                     product_id=product,
                     sale_id=sale
                 )
-                
-                sale_detail.save()
-
-                igv = item['price'] * 0.18
-                valor_unitario = item['price']
-                precio_unitario = item['price'] + igv
-                subtotal = item['subtotal']
 
                 items.append({
                     'unidad_de_medida': 'NIU',
@@ -223,34 +228,43 @@ class SaleCreateView(generics.CreateAPIView):
                     'codigo_producto_sunat': '10000000',
                     'descripcion': product.name,
                     'cantidad': quantity,
-                    'valor_unitario': valor_unitario,
-                    'precio_unitario': precio_unitario,
+                    'valor_unitario': item['price'],
+                    'precio_unitario': item['price'] + igv,
                     'subtotal': subtotal,
                     'tipo_de_igv': 1,
-                    'igv': igv,
+                    'igv': igv * quantity,
                     'total': (item['price'] + igv) * quantity,
                     'anticipo_regularizacion': False
                 })
+
+                sale.total_gravada = total_gravada
+                sale.total_igv = total_igv
+                sale.save()
+
+                if user.document_type == 'DNI':
+                    cliente_tipo_de_documento = 1
+                elif user.document_type == 'PASAPORTE':
+                    cliente_tipo_de_documento = 4
                 
             body = {
                 'operacion': 'generar_comprobante',
                 'tipo_de_comprobante': 2,
                 'serie': 'BBB1',
-                'numero': 1,
+                'numero': sale.id,
                 'sunat_transaction': 1,
-                'cliente_tipo_de_documento': 1,
-                'cliente_numero_de_documento': '12345678',
-                'cliente_denominacion': 'TEST',
-                'cliente_direccion': 'AV. TEST 123',
-                'cliente_email': 'test@mail.com',
+                'cliente_tipo_de_documento': cliente_tipo_de_documento,
+                'cliente_numero_de_documento': user.document_number,
+                'cliente_denominacion': user.name,
+                'cliente_direccion': "AV. LARCO 123",
+                'cliente_email': user.email,
                 'fecha_de_emision': datetime.now().strftime('%d-%m-%Y'),
                 'moneda': 1,
                 'porcentaje_de_igv': 18.0,
-                'total_gravada': 100,
-                'total_igv': 18,
-                'total': 118,
+                'total_gravada': round(total_gravada, 2),
+                'total_igv': round(total_igv, 2),
+                'total': round(total_gravada + total_igv, 2),
                 'detraccion': False,
-                'enviar_automaticamente_a_la_sunat': True,
+                'enviar_automaticamente_a_la_sunat': False,
                 'enviar_automaticamente_al_cliente': True,
                 'items': items
             }
@@ -266,7 +280,7 @@ class SaleCreateView(generics.CreateAPIView):
             if nubefact_response.status_code != 200:
                 raise Exception(json['errors'])
                 
-            return Response({'message': 'Sale created!'}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'Sale created!', 'pdf_url': json['enlace_del_pdf']}, status=status.HTTP_201_CREATED)
         except Exception as e:
             transaction.set_rollback(True)
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -318,7 +332,7 @@ class InvoiceCreateView(generics.GenericAPIView):
                     {
                         'unidad_de_medida': 'NIU',
                         'codigo': 'P001',
-                        'codigo_producto_sunat': '1234567890',
+                        'codigo_producto_sunat': '10000000',
                         'descripcion': 'SNEAKERS',
                         'cantidad': 1,
                         'valor_unitario': 100,
@@ -377,6 +391,7 @@ class InvoiceGetView(APIView):
         
 class PaymentCreateView(APIView):
     def post(self, request):
+        # No funciona por ahora
         try:
             mp = mercadopago.SDK(environ.get('MP_ACCESS_TOKEN'))
 
@@ -387,9 +402,15 @@ class PaymentCreateView(APIView):
                         "title": "Sneakers",
                         "description": "Sneakers description",
                         "quantity": 1,
-                        "unit_price": 200
+                        "unit_price": 20.00
                     }
                 ],
+                'back_urls': {
+                    'success': 'http://localhost:8000/api/payment/notification',
+                    'failure': 'http://localhost:8000/api/payment/notification',
+                    'pending': 'http://localhost:8000/api/payment/notification'
+                },
+                'notification_url': 'http://localhost:8000/api/payment/notification'
             }
 
             mp_response = mp.preference().create(preference)
@@ -406,11 +427,15 @@ class PaymentCreateView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class NotificationPaymentView(APIView):
-    def post(self, request: Request):
+    def post(self, request):
         try:
             data = request.data
+            query_params = request.query_params
+
+            print("notificación:")
             print(data)
-            print(request.query_params)
+            print("consulta:")
+            print(query_params)
 
             return Response({'ok': True}, status=status.HTTP_200_OK)
         except Exception as e:
