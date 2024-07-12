@@ -20,20 +20,24 @@ from pprint import pprint
 from datetime import datetime
 import mercadopago
 from rest_framework.request import Request
+from rest_framework.exceptions import ValidationError
 
 class RegisterView(generics.CreateAPIView):
     queryset = MyUser.objects.all()
     serializer_class = UserCreateSerializer
     
     def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        document_number = request.data.get('document_number')
+        
+        if MyUser.objects.filter(email=email).exists():
+            return Response({'error': 'User with this email already exists!'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if MyUser.objects.filter(document_number=document_number).exists():
+            return Response({'error': 'A user with this document number already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.serializer_class(data=request.data)
         try:
-            email = request.data.get('email')
-            user = MyUser.objects.filter(email=email).first()
-            
-            if user:
-                return Response({'error': 'User already exists!'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            serializer = self.serializer_class(data=request.data)
             serializer.is_valid(raise_exception=True)
             new_user = serializer.save()
             refresh = RefreshToken.for_user(new_user)
@@ -50,30 +54,43 @@ class LoginView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        if 'access' in response.data and 'refresh' in response.data:
-            user = self.get_user(request.data.get('email'))
-            if user:
-                user_data = {
-                    'id': user.id,
-                    'user_id': user.id,
-                    'name': user.name,
-                    'email': user.email,
-                    'document_type': user.document_type,
-                    'document_number': user.document_number,
-                    'status': user.status,
-                    'is_admin': user.is_admin,
-                    'is_active': user.is_active,
-                }
-                response.data['user'] = user_data
-            else:
-                response.data['error'] = 'User not found'
-                response.status_code = status.HTTP_404_NOT_FOUND
-        return response
-
-    def get_user(self, email):
         try:
-            return MyUser.objects.get(email=email)
+            response = super().post(request, *args, **kwargs)
+
+            if response.status_code == status.HTTP_200_OK:
+                user_data = self.get_user_data(request.data.get('email'))
+                if user_data:
+                    response.data['user'] = user_data
+                else:
+                    raise ValidationError('User not found.')
+            return response
+
+        except ValidationError as e:
+            if hasattr(e, 'detail') and isinstance(e.detail, dict):
+                error_messages = e.detail.get('non_field_errors', [])
+                if error_messages:
+                    error_message = str(error_messages[0])
+                else:
+                    error_message = 'An unknown error occurred.'
+            else:
+                error_message = 'An unknown error occurred.'
+            
+            return Response({'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
+
+    def get_user_data(self, email):
+        try:
+            user = MyUser.objects.get(email=email)
+            return {
+                'id': user.id,
+                'user_id': user.id,
+                'name': user.name,
+                'email': user.email,
+                'document_type': user.document_type,
+                'document_number': user.document_number,
+                'status': user.status,
+                'is_admin': user.is_admin,
+                'is_active': user.is_active,
+            }
         except MyUser.DoesNotExist:
             return None
     

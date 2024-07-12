@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import ProductModel, SaleModel, SaleDetailModel, MyUser
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import authenticate
+from django.utils.translation import gettext_lazy as _
 
 class UserCreateSerializer(serializers.ModelSerializer):
     is_admin = serializers.BooleanField(default=False)
@@ -24,6 +26,20 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token['email'] = user.email
         return token
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+
+        user = authenticate(username=email, password=password)
+
+        if user is None:
+            raise serializers.ValidationError(_('Invalid email or password.'))
+
+        if not user.is_active:
+            raise serializers.ValidationError(_('No active account found with the given credentials.'))
+
+        return super().validate(attrs)
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
